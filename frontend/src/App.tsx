@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import {
   api,
+  API_BASE,
   type UserItem,
   type LodgeThoughtRequest
 } from './api';
@@ -69,7 +70,7 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     const checkHealth = () => {
-      fetch('/api/health')
+      fetch(`${API_BASE}/health`)
         .then(res => res.ok ? res.json() : Promise.reject())
         .then(() => setBackendHealthy(true))
         .catch(() => setBackendHealthy(false));

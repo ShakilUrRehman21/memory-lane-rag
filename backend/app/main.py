@@ -54,3 +54,10 @@ def health_check():
         "service": settings.PROJECT_NAME,
         "version": settings.VERSION
     }
+
+# Mount production frontend static files if built
+frontend_dist = settings.BASE_DIR / "frontend" / "dist"
+if frontend_dist.exists():
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/", StaticFiles(directory=str(frontend_dist), html=True), name="frontend")
+

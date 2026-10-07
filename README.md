@@ -222,6 +222,9 @@ memory-lane-rag/
 │       ├── uploads/                  # Ingested file storage
 │       └── vectors/                  # Vector cache files
 ├── ARCHITECTURE_PLAN.md              # In-depth architectural design specification
+├── DEPLOYMENT.md                     # Production deployment guide (Render, Railway, Docker, VPS)
+├── Dockerfile                        # Multi-stage production container definition
+├── docker-compose.yml                # Docker Compose with persistent data volume
 ├── pytest.ini                        # Pytest configuration
 ├── requirements.txt                  # Python dependencies
 ├── .env.example                      # Environment variables template
@@ -231,7 +234,16 @@ memory-lane-rag/
 
 ---
 
-## 🚀 Quickstart
+## 🐳 One-Line Docker Run
+
+```bash
+docker compose up -d --build
+```
+*Access the unified full-stack application at `http://localhost:8000`.* See [DEPLOYMENT.md](DEPLOYMENT.md) for complete cloud guides (Render, Railway, Vercel, VPS).
+
+---
+
+## 🚀 Local Development Quickstart
 
 ### Prerequisites
 - **Python 3.10+** (tested on Python 3.13)

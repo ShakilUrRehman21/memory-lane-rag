@@ -173,8 +173,9 @@ export interface VersionDiff {
   summary: string;
 }
 
-const API_BASE = '/api';
+export const API_BASE = (import.meta.env.VITE_API_BASE_URL ? String(import.meta.env.VITE_API_BASE_URL).replace(/\/+$/, '') : '') + '/api';
 const TOKEN_KEY = 'memory_lane_auth_token';
+
 
 export const api = {
   // Token storage helpers
