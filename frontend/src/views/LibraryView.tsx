@@ -44,7 +44,7 @@ export function LibraryView() {
         <>
           {tags.data && Object.keys(tags.data).length > 0 && (
             <div className="row wrap gap-s mb">
-              {Object.entries(tags.data).map(([t, n]) => <button key={t} className={cx('chip', tag === t && 'on')} onClick={() => setTag(tag === t ? null : t)}># {t} <span className="faint">{n}</span></button>)}
+              {Object.entries(tags.data).map(([t, n]) => <button key={t} className={cx('chip', tag === t && 'on')} onClick={() => setTag(tag === t ? null : t)}># {t} <span className="faint">{String(n)}</span></button>)}
             </div>
           )}
           {docs.loading && !docs.data ? <div className="grid g3">{[0, 1, 2, 3, 4, 5].map(i => <Skeleton key={i} h={170} r={24} />)}</div>
