@@ -5,6 +5,9 @@ import { api } from '../lib/api';
 import { useApp, useLoad } from '../lib/app';
 import { CHANGE_META, TYPE_META, cx, fmtDate } from '../lib/format';
 import { Empty, Skeleton, TypeBadge } from '../components/ui';
+import type { Memory, Subject } from '../lib/types';
+
+type TimelineYear = { year: string; memories: Memory[] };
 
 export function TimelineView() {
   const { openMemory, param } = useApp();
@@ -18,11 +21,11 @@ export function TimelineView() {
   useEffect(() => { setEntity(param); }, [param]);
 
   const { data, loading } = useLoad(() => api.timeline({ q: debounced || undefined, entity: entity || undefined }), [debounced, entity]);
-  const subjects = useLoad(() => api.subjects());
+  const subjects = useLoad<Subject[]>(() => api.subjects());
 
-  const years = (data?.years || []).filter(y => y.memories.length);
+  const years: TimelineYear[] = (data?.years || []).filter((y: TimelineYear) => y.memories.length);
   const ordered = years;
-  const total = years.reduce((s, y) => s + y.memories.length, 0);
+  const total = years.reduce((s: number, y: TimelineYear) => s + y.memories.length, 0);
 
   // track the year in view for the minimap
   useEffect(() => {
@@ -45,7 +48,7 @@ export function TimelineView() {
         <div className="input-icon grow" style={{ minWidth: 220 }}><Search size={16} /><input className="input" placeholder="Search…" value={q} onChange={e => setQ(e.target.value)} /></div>
         <select className="select" style={{ width: 220 }} value={entity || ''} onChange={e => setEntity(e.target.value || null)}>
           <option value="">All topics</option>
-          {subjects.data?.filter(s => s.kind === 'entity').map(s => <option key={s.name} value={s.name}>{s.name} ({s.count})</option>)}
+          {subjects.data?.filter((s: Subject) => s.kind === 'entity').map((s: Subject) => <option key={s.name} value={s.name}>{s.name} ({s.count})</option>)}
         </select>
         {(entity || q) && <button className="chip" onClick={() => { setEntity(null); setQ(''); }}><X size={12} /> Clear</button>}
       </div>
@@ -56,12 +59,12 @@ export function TimelineView() {
             <div className="river-wrap">
               <div className="river">
                 <div className="river-line" />
-                {ordered.map(y => (
+                {ordered.map((y: TimelineYear) => (
                   <div key={y.year} className="river-year" data-year={y.year} ref={el => { refs.current[y.year] = el; }}>
                     <motion.div className="year-mark" initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, margin: '-80px' }}>
                       <span className="display">{y.year}</span><span className="tiny faint">{y.memories.length} moments</span>
                     </motion.div>
-                    {y.memories.map((m, i) => {
+                    {y.memories.map((m: Memory, i: number) => {
                       const change = data?.change_markers[m.id];
                       const side = i % 2 === 0 ? 'left' : 'right';
                       return (
@@ -78,7 +81,7 @@ export function TimelineView() {
                             <div className="serif" style={{ fontSize: 14, lineHeight: 1.45, margin: '10px 0 8px' }}>{m.statement}</div>
                             <div className="row wrap gap-s">
                               {change && <span className="chip tiny" style={{ color: CHANGE_META[change.change_type]?.tone }}><GitBranch size={11} /> {CHANGE_META[change.change_type]?.label} · {change.subject}</span>}
-                              {m.entities.slice(0, 3).map(e => <span key={e} className="chip tiny">{e}</span>)}
+                              {m.entities.slice(0, 3).map((e: string) => <span key={e} className="chip tiny">{e}</span>)}
                               <span className="tiny faint truncate" style={{ marginLeft: 'auto', maxWidth: 200 }}>{m.document_title}</span>
                             </div>
                           </button>
@@ -89,7 +92,7 @@ export function TimelineView() {
                 ))}
               </div>
               <nav className="minimap hide-mobile">
-                {ordered.map(y => (
+                {ordered.map((y: TimelineYear) => (
                   <button key={y.year} className={cx(activeYear === y.year && 'on')} onClick={() => refs.current[y.year]?.scrollIntoView({ behavior: 'smooth', block: 'start' })}>
                     <span className="mm-bar" style={{ width: `${Math.min(100, 20 + y.memories.length * 8)}%` }} />{y.year}
                   </button>
