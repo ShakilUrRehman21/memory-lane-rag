@@ -1,0 +1,20 @@
+.git
+.gitignore
+.env
+.env.*
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.venv
+venv
+env
+node_modules
+frontend/node_modules
+frontend/dist
+data/storage/*.db
+data/storage/*.sqlite*
+data/storage/uploads/*
+!data/storage/uploads/.gitkeep
+Claude outputs
+[Cc]laude*

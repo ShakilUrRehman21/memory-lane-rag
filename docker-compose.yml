@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  memory-lane-rag:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: memory-lane-rag
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      - memory_lane_data:/app/data/storage
+
+volumes:
+  memory_lane_data:
+    driver: local
