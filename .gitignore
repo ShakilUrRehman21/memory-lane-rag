@@ -41,8 +41,8 @@ htmlcov/
 data/storage/*.db
 data/storage/uploads/*
 !data/storage/uploads/.gitkeep
-data/storage/vectors/*
-!data/storage/vectors/.gitkeep
+data/storage/vectors/
+data/storage/models/
 
 # Environment variables & secrets
 .env
@@ -69,3 +69,5 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 desktop.ini
+
+

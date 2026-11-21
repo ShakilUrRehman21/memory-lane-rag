@@ -1,380 +1,93 @@
-# ⏳ Memory Lane RAG
+# Memory Lane
 
-### Temporal Retrieval-Augmented Generation & Longitudinal Reasoning System
+**A private, time-aware companion for your journals and documents.**
+Ask how your thinking changed, find the turning points, notice the tensions, and see what has always stayed the same — every answer grounded in your own words, with dates and sources you can open.
 
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![React 18](https://img.shields.io/badge/React-18.3-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![SQLite FTS5](https://img.shields.io/badge/SQLite-FTS5%20BM25-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://sqlite.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
+Memory Lane is a *temporal* RAG system: it doesn't just find similar passages, it understands **when** each thought happened and reasons across time.
 
 ---
 
-## 🌟 Overview
+## What's inside
 
-Traditional Retrieval-Augmented Generation (RAG) systems assume information exists as **static, time-agnostic knowledge**. When matching queries using dense vector similarity alone, they suffer from two critical flaws:
+| Page | What it's for |
+|---|---|
+| **Today** | A greeting, one box to ask anything, *On this day* memories, and how your views have changed |
+| **Ask** | Ask your past self a question. Answers stream in, and every `[n]` opens the exact entry it came from |
+| **Timeline** | All your memories in the order they happened. Search, or filter by topic |
+| **Library** | Drop in journals, notes or documents (PDF, Word, text, Markdown and more), or write a note |
+| **Settings** | Light/dark theme, profile, backup & restore, password |
 
-1. **Recency & Density Clustering**: Search returns documents densely clustered around recent dates or repetitive topics, ignoring the historical progression.
-2. **Temporal Blindness**: Vector similarity cannot differentiate between what a person *believed in 2019*, *re-evaluated in 2022*, and *committed to in 2026*.
+Shortcuts: `Ctrl K` to search, `Ctrl J` to write a quick thought.
 
-**Memory Lane RAG** is an open-source, full-stack temporal RAG framework engineered specifically for **longitudinal understanding**. It captures how beliefs, goals, decisions, preferences, and knowledge transform over time, grounding every generated statement in verifiable citations and calibrated epistemic uncertainty.
+## Quick start (Windows)
 
-```
-"How has my perspective on AI shifted from 2019 to 2026?"
-"When did I abandon Java and what did I replace it with?"
-"Did I contradict my earlier career goals?"
-"What was the pivotal turning point in my research agenda?"
-```
+Double-click **`start.bat`**. That's it.
 
----
+The first run sets everything up (Python environment, packages, web app) and takes a few minutes; after that it starts in seconds and opens your browser at http://127.0.0.1:8000. Keep the window open while you use Memory Lane, and close it to stop.
 
-## 🔬 Core Innovations
+You need [Python 3.10+](https://www.python.org/downloads/) (tick *Add python.exe to PATH*) and [Node.js LTS](https://nodejs.org/) installed once.
 
-### 1. The Quad-Date Temporal Model
-Standard pipelines rely on a single document timestamp. Memory Lane RAG models documents and atomic memories across four independent temporal coordinates:
+Try the demo by clicking one of the demo people on the sign-in screen (password `password123`), or create your own account.
 
-| Timestamp | Notation | Meaning | Example |
-| :--- | :---: | :--- | :--- |
-| **Document Date** | $t_{doc}$ | When the document was authored or published | *Written on Oct 14, 2025* |
-| **Event Date** | $t_{event}$ | When the described event, decision, or realization occurred in reality | *"Back in spring 2021, I decided..."* $\rightarrow 2021\text{-}04$ |
-| **Ingestion Date** | $t_{ingest}$ | System indexing timestamp | *Indexed on Oct 07, 2026* |
-| **Version Date** | $t_{ver}$ | Revision timestamp for document iterations | *Resume v1 (2019) vs Resume v3 (2026)* |
+After adding API keys to `.env`, double-click **`test-keys.bat`** to check they work: it sends each provider a one-word question, then asks a real question about the demo archive.
 
-### 2. Temporal Memory Units (TMU)
-Rather than passing unsegmented text chunks to downstream synthesis, documents are deconstructed into structured **Temporal Memory Units (TMU)**:
-- **Proposition Typology**: `belief`, `goal`, `decision`, `preference`, `knowledge`, `observation`, `plan`, `reflection`, `event`
-- **Stance Polarity**: Continuous scale from $-1.0$ (rejection/abandonment/skepticism) to $+1.0$ (strong commitment/adoption)
-- **Temporal Confidence & Extents**: Explicit interval $[t_{start}, t_{end}]$ with extraction certainty score
+`dev.bat` is for editing the code: it runs the API and web app with live reload in two windows (http://localhost:5173).
 
-### 3. Multi-Period Stratified Retrieval & Reciprocal Rank Fusion (RRF)
-To prevent semantic vector retrieval from clustering exclusively in the most verbose epoch, the engine applies **Stratified Epoch Binning**:
-1. Candidate memories are partitioned into chronological bins (e.g., 2018–2020, 2021–2022, 2023–2024, 2025–2026).
-2. Balanced round-robin sampling selects top representative candidates across each bin.
-3. Reranking combines BM25 full-text rank, dense cosine rank, and milestone polarity boosts using Reciprocal Rank Fusion:
-   $$RRF(d) = \sum_{m \in \{\text{dense}, \text{sparse}, \text{temporal}\}} \frac{1}{k + \text{rank}_m(d)}$$
-
-### 4. Semantic Drift & Change-Point Detection
-- **Semantic Distance**: Pairwise distance $\Delta_{i,j} = 1 - \cos(\mathbf{e}_i, \mathbf{e}_j)$ measures ideological divergence.
-- **Polarity Inversions**: Flags stance reversals when $\text{polarity}_i \cdot \text{polarity}_j < 0$.
-- **Transition Categorization**: Classifies transitions into `gradual_evolution`, `sudden_shift`, `reversal`, or `goal_abandonment`.
-- **Bounded Temporal Uncertainty**: When consecutive evidence is separated by $> 180$ days, the system explicitly reports:
-  $$\text{"Shift occurred between June 2021 and May 2023 (exact turning point unrecorded in archive)."}$$
-
-### 5. Grounded Claim Provenance
-Generated longitudinal summaries are deconstructed into individual claims:
-- **`explicit`**: Direct citations supported by verbatim document text.
-- **`empirical_change`**: Transitions verified by mathematical drift or polarity flips.
-- **`inferred_relationship`**: Hypothesized connections accompanied by epistemic confidence scores.
-
----
-
-## 🏗️ System Architecture
-
-```
-                            ┌──────────────────────────────────────────┐
-                            │    User Ingestion (PDF / DOCX / MD / TXT) │
-                            └────────────────────┬─────────────────────┘
-                                                 │
-                               ┌─────────────────▼─────────────────┐
-                               │     Ingestion & Parser Pipeline   │
-                               │  - Quad-Date Disambiguation       │
-                               │  - Semantic Chunker               │
-                               │  - TMU & Stance Polarity Scorer   │
-                               └─────────────────┬─────────────────┘
-                                                 │
-                   ┌─────────────────────────────┼─────────────────────────────┐
-                   │                             │                             │
-        ┌──────────▼──────────┐       ┌──────────▼──────────┐       ┌──────────▼──────────┐
-        │  SQLite FTS5 (BM25) │       │ Vector Cosine Store │       │ Relational TMU DB   │
-        │  Lexical Retrieval  │       │ Semantic Retrieval  │       │ Entities & Metadata │
-        └──────────┬──────────┘       └──────────┬──────────┘       └──────────┬──────────┘
-                   │                             │                             │
-                   └─────────────────────────────┼─────────────────────────────┘
-                                                 │
-                               ┌─────────────────▼─────────────────┐
-                               │   Multi-Period Stratified RRF     │
-                               │   Hybrid Retrieval & Reranker     │
-                               └─────────────────┬─────────────────┘
-                                                 │
-                   ┌─────────────────────────────┴─────────────────────────────┐
-                   │                                                           │
-        ┌──────────▼──────────┐                                     ┌──────────▼──────────┐
-        │ Reasoning Engine    │                                     │ Grounded Synthesizer│
-        │ - Semantic Drift    │                                     │ - Provenance Claims │
-        │ - Polarity Flips    │                                     │ - Citation Anchors  │
-        │ - Graph Relational  │                                     │ - Epistemic Bounds  │
-        └──────────┬──────────┘                                     └──────────┬──────────┘
-                   │                                                           │
-                   └─────────────────────────────┬─────────────────────────────┘
-                                                 │
-                               ┌─────────────────▼─────────────────┐
-                               │       Modern React 18 Web UI      │
-                               │   Timeline · Graph · Benchmarks   │
-                               └───────────────────────────────────┘
-```
-
----
-
-## 📊 Empirical Research Benchmark Studio
-
-Memory Lane RAG includes a research studio comparing three retrieval paradigms on longitudinal reasoning tasks:
-
-| Paradigm | Retrieval Mechanism | Temporal Context | Change Detection | Grounding |
-| :--- | :--- | :--- | :--- | :--- |
-| **Baseline RAG** | Dense Top-K Cosine | Date-ignorant | None | Standard prompt |
-| **Temporal RAG** | Vector + Date Filter/Sort | Metadata timestamp filter | None | Standard prompt |
-| **Memory Lane RAG** | Hybrid BM25 + Vector + Stratified Bins | Quad-Date Model + TMU | Drift & Polarity Flips | Claim Provenance + Uncertainty Bounds |
-
-### Experimental Results
-
-| Metric | Baseline RAG | Temporal RAG | Memory Lane RAG |
-| :--- | :---: | :---: | :---: |
-| **Chronological Ordering Accuracy (COA)** | 0.40 | 0.82 | **1.00** |
-| **Temporal Coverage Recall (TCR)** | 0.35 | 0.70 | **0.95** |
-| **Change-Point Detection F1** | 0.00 | 0.20 | **0.92** |
-| **Unsupported Hallucination Rate (UHCR)** | 0.28 | 0.15 | **0.00** |
-| **Average Query Latency (s)** | 0.12s | 0.14s | **0.22s** |
-
-- **COA**: Ratio of retrieved events that maintain monotonic temporal order without retrospective time travel.
-- **TCR**: Proportion of distinct historical periods represented in retrieved context.
-- **Change F1**: Precision and recall of detecting genuine viewpoint/goal shifts.
-- **UHCR**: Proportion of generated assertions lacking direct document citation grounding.
-
----
-
-## 📁 Repository Structure
-
-```
-memory-lane-rag/
-├── backend/
-│   ├── app/
-│   │   ├── api/                      # FastAPI REST endpoints
-│   │   │   ├── routes_auth.py        # User login, registration, token authentication
-│   │   │   ├── routes_users.py       # User profile listings & switcher
-│   │   │   ├── routes_documents.py   # Multi-format document ingestion & uploads
-│   │   │   ├── routes_query.py       # Longitudinal natural language query endpoint
-│   │   │   ├── routes_timeline.py    # Chronological memory event stream
-│   │   │   ├── routes_changes.py     # Semantic drift & turning point explorer
-│   │   │   ├── routes_versions.py    # Document revision diff comparisons
-│   │   │   ├── routes_graph.py       # Temporal relationship knowledge graph
-│   │   │   └── routes_research.py    # Empirical benchmark runner & evaluation
-│   │   ├── core/
-│   │   │   ├── config.py             # Settings, storage paths, hyperparameters
-│   │   │   ├── database.py           # SQLite connection pool, migrations, FTS5 indices
-│   │   │   └── security.py           # Password hashing, PBKDF2 salt, session tokens
-│   │   ├── ingestion/
-│   │   │   ├── parsers.py            # PDF, DOCX, TXT, MD parsers
-│   │   │   ├── date_extractor.py     # Quad-Date parsing & temporal normalization
-│   │   │   ├── chunker.py            # Semantic-temporal chunker
-│   │   │   ├── tmu_extractor.py      # TMU extraction & stance polarity scoring
-│   │   │   └── ingestion_service.py  # Ingestion workflow orchestrator
-│   │   ├── storage/
-│   │   │   ├── repository.py         # Relational operations with user data isolation
-│   │   │   ├── fts_store.py          # SQLite FTS5 BM25 search
-│   │   │   └── vector_store.py       # Normalized cosine similarity vector index
-│   │   ├── retrieval/
-│   │   │   ├── query_router.py       # Query intent classifier & date boundary parser
-│   │   │   ├── stratified_sampler.py # Multi-epoch balanced temporal sampler
-│   │   │   ├── reranker.py           # Reciprocal Rank Fusion & milestone booster
-│   │   │   └── hybrid_retriever.py   # Hybrid sparse + dense + temporal retriever
-│   │   ├── reasoning/
-│   │   │   ├── change_detector.py    # Semantic drift & turning point detector
-│   │   │   ├── contradiction_detector.py # Stance polarity inversion detector
-│   │   │   ├── version_diff.py       # Revision comparison engine
-│   │   │   └── memory_graph.py       # Directed temporal relationship graph
-│   │   ├── synthesis/
-│   │   │   ├── llm_provider.py       # LLM provider (Gemini / OpenAI / Deterministic fallback)
-│   │   │   └── grounded_synthesizer.py # Claim provenance & citation synthesizer
-│   │   ├── evaluation/
-│   │   │   ├── benchmark_dataset.py  # Multi-year longitudinal test corpus
-│   │   │   ├── metrics.py            # COA, TCR, Change F1, UHCR metrics calculators
-│   │   │   └── experiment_runner.py  # Empirical benchmark runner
-│   │   ├── main.py                   # FastAPI application initialization & CORS
-│   │   └── seed.py                   # Realistic multi-user longitudinal seeder
-│   ├── tests/                        # 100% passing automated test suite
-│   │   ├── test_auth_flow.py
-│   │   ├── test_phase1_ingestion.py
-│   │   ├── test_phase2_retrieval.py
-│   │   ├── test_phase3_reasoning.py
-│   │   └── test_phase4_and_phase5_api_and_research.py
-│   └── run.py                        # Backend server startup launcher
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── AskMemoryLaneView.tsx # Natural language longitudinal inquiry
-│   │   │   ├── TimelineView.tsx      # Zoomable chronological stream
-│   │   │   ├── ChangeExplorerView.tsx# Semantic drift & transition trajectories
-│   │   │   ├── ContradictionView.tsx # Stance reversal inspector
-│   │   │   ├── VersionDiffView.tsx   # Document revision comparison
-│   │   │   ├── MemoryGraphView.tsx   # Knowledge network node-link visualizer
-│   │   │   ├── DocumentsView.tsx     # Ingestion & file management studio
-│   │   │   ├── ResearchStudioView.tsx# Comparative benchmark workbench
-│   │   │   ├── AuthView.tsx          # Login & registration modal
-│   │   │   └── MemoryLaneLogo.tsx    # Brand logo component
-│   │   ├── api.ts                    # Type-safe API client
-│   │   ├── App.tsx                   # Main layout and workspace switcher
-│   │   └── index.css                 # Dark-mode design system
-│   ├── package.json
-│   └── vite.config.ts
-├── data/                             # Storage directory (.gitignored)
-│   └── storage/
-│       ├── uploads/                  # Ingested file storage
-│       └── vectors/                  # Vector cache files
-├── ARCHITECTURE_PLAN.md              # In-depth architectural design specification
-├── DEPLOYMENT.md                     # Production deployment guide (Render, Railway, Docker, VPS)
-├── Dockerfile                        # Multi-stage production container definition
-├── docker-compose.yml                # Docker Compose with persistent data volume
-├── pytest.ini                        # Pytest configuration
-├── requirements.txt                  # Python dependencies
-├── .env.example                      # Environment variables template
-├── .gitignore                        # Git ignore rules
-└── README.md
-```
-
----
-
-## 🐳 One-Line Docker Run
+### Manual start (macOS / Linux)
 
 ```bash
-docker compose up -d --build
-```
-*Access the unified full-stack application at `http://localhost:8000`.* See [DEPLOYMENT.md](DEPLOYMENT.md) for complete cloud guides (Render, Railway, Vercel, VPS).
-
----
-
-## 🚀 Local Development Quickstart
-
-### Prerequisites
-- **Python 3.10+** (tested on Python 3.13)
-- **Node.js 18+** & npm
-
-### 1. Clone & Set Up Backend
-
-```bash
-# Clone the repository
-git clone https://github.com/ShakilUrRehman21/memory-lane-rag.git
-cd memory-lane-rag
-
-# Create and activate Python virtual environment
-python -m venv .venv
-
-# On Windows (PowerShell):
-.\.venv\Scripts\Activate.ps1
-# On Linux / macOS:
-# source .venv/bin/activate
-
-# Install backend dependencies
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-
-# (Optional) Configure API keys
-cp .env.example .env
+(cd frontend && npm install && npm run build)
+python backend/run.py           # http://127.0.0.1:8000
 ```
 
-> **Note**: An LLM API key is completely optional! The engine includes a high-fidelity local deterministic synthesizer for offline development and reproducible benchmarking.
+**Docker:** `docker compose up --build` → http://localhost:8000.
 
-### 2. Seed Data & Run Tests
+## Answer quality: models & embeddings
+
+| Setting | What happens |
+|---|---|
+| No keys | Answers come from the built-in **offline writer**: chronological and fully cited. |
+| `GEMINI_API_KEY` or `OPENAI_API_KEY` | Streaming, conversational answers from that model, grounded in numbered evidence. |
+| `OLLAMA_URL` | Same, using a local model through Ollama. |
+| Embeddings (`EMBEDDINGS=auto`) | Uses **fastembed** (`bge-small-en-v1.5`, ~70 MB, downloaded once, runs locally). Falls back to Gemini/OpenAI embeddings, then to a built-in lexical-semantic embedder. Switching providers re-indexes automatically. |
+
+The bottom of the Settings page shows which model is writing your answers.
+
+## Tests
 
 ```bash
-# Seed realistic multi-year longitudinal archives (2018–2026)
-python backend/app/seed.py
-
-# Run automated test suite
-pytest
+pip install -r requirements-dev.txt
+python -m pytest            # 24 tests: auth & isolation, ingestion, dates, retrieval, chat streaming, export/import, benchmark
+cd frontend && npm run build   # type-check + production build
 ```
 
-### 3. Launch the Backend Server
+## Upgrading from v1
 
-```bash
-python backend/run.py
+The first start archives the old database as `data/storage/memory_lane.v1-backup.db`, carries over real accounts (passwords keep working and are upgraded on next sign-in), re-imports their documents, and re-seeds the demo archives. Test accounts are not carried over.
+
+## Project layout
+
 ```
-*The FastAPI backend will start at `http://127.0.0.1:8000` (API documentation available at `http://127.0.0.1:8000/docs`).*
-
-### 4. Launch the Frontend
-
-In a separate terminal:
-
-```bash
-cd frontend
-
-# Install frontend dependencies
-npm install
-
-# Start Vite development server
-npm run dev
+backend/app/
+  core/        config (.env), SQLite schema & migration, auth & rate limiting
+  ingestion/   parsers, date grounding, chunking, memory extraction, pipeline
+  ai/          embeddings (fastembed / API / local) and streaming LLM adapters
+  storage/     repository (users, documents, memories, chats…) and vector index
+  retrieval/   query understanding and hybrid temporal retrieval
+  reasoning/   change points, contradictions, graph edges, version diff, insights
+  synthesis/   grounded, cited answer generation + offline writer
+  evaluation/  benchmark corpus and runner
+  api/         FastAPI routes
+frontend/src/
+  lib/         API client (SSE streaming), app state, formatting
+  components/  shell, search & capture, detail drawers, UI primitives, ambient background
+  views/       Today, Ask, Timeline, Library, Settings
 ```
 
-Open `http://localhost:5173` in your browser.
+See [ARCHITECTURE.md](ARCHITECTURE.md) for how it works and [DEPLOYMENT.md](DEPLOYMENT.md) for hosting.
 
----
+## License
 
-## 👥 Demo Personas
-
-The database is pre-seeded with three realistic longitudinal personas:
-
-| Persona | Username | Default Password | Horizon | Trajectory Focus |
-| :--- | :--- | :--- | :---: | :--- |
-| **Alex Chen** | `alex_chen` | `password123` | **2019 – 2026** (7 Years) | Systems Engineer (Java/C++) $\rightarrow$ Frontier AI Researcher |
-| **Dr. Sophia Taylor** | `sophia_taylor` | `password123` | **2020 – 2026** (6 Years) | Wet Lab Biologist $\rightarrow$ Computational Genomic AI Lead |
-| **Marcus Vance** | `marcus_vance` | `password123` | **2018 – 2026** (8 Years) | B2B SaaS PM $\rightarrow$ Autonomous AI Venture Builder |
-
-*Switch between personas seamlessly in the top-right navigation bar to test longitudinal queries across distinct domains.*
-
----
-
-## 🖥️ User Interface Views
-
-1. **Ask Memory Lane**: Submit natural language longitudinal questions. Responses include verified claim badges, chronological context tags, and epistemic uncertainty qualifiers.
-2. **Chronological Timeline**: An interactive timeline of propositions categorized by type (`belief`, `goal`, `decision`, etc.) with visual polarity indicators.
-3. **Change Explorer**: Interactive visual inspection of detected semantic drift, stance shifts, and transition velocity over multi-year periods.
-4. **Contradiction Inspector**: Pinpoints exact stance inversions where earlier beliefs or commitments were reversed.
-5. **Version Diff**: Side-by-side textual and structural comparison of document iterations (e.g., Resume 2019 vs. Resume 2026).
-6. **Temporal Memory Graph**: An interactive node-link graph mapping directional relationships across memories.
-7. **Document Studio**: Upload and index documents (PDF, DOCX, TXT, MD) with automatic Quad-Date and TMU extraction.
-8. **Research Studio**: Interactive evaluation workbench running real-time comparative benchmarks between Baseline RAG, Temporal RAG, and Memory Lane RAG.
-
----
-
-## 🔌 API Reference
-
-### Authentication & Users
-- `POST /api/auth/register` — Create a new account
-- `POST /api/auth/login` — Authenticate and obtain session token
-- `GET /api/auth/me` — Get current authenticated profile
-- `POST /api/auth/logout` — Revoke session token
-- `GET /api/users` — List registered user personas
-
-### Longitudinal Query & Ingestion
-- `POST /api/query` — Submit longitudinal question:
-  ```json
-  {
-    "query": "How did Alex's career goals change between 2019 and 2026?",
-    "user_id": "user_alex",
-    "top_k": 8
-  }
-  ```
-- `POST /api/documents/upload` — Multipart form upload supporting PDF, DOCX, TXT, MD
-- `GET /api/documents` — List indexed documents
-- `DELETE /api/documents/{id}` — Cascade deletion of document, chunks, vectors, and TMUs
-
-### Temporal Reasoning & Research
-- `GET /api/timeline?user_id=user_alex` — Retrieve chronological memory stream
-- `GET /api/changes?user_id=user_alex` — Retrieve detected semantic drift and turning points
-- `GET /api/contradictions?user_id=user_alex` — Inspect stance polarity inversions
-- `GET /api/versions/{doc_id}/diff?target_doc_id={target_id}` — Document version diff
-- `GET /api/graph?user_id=user_alex` — Node-edge graph of temporal memories
-- `POST /api/research/run-benchmark` — Execute empirical comparative benchmark suite
-
----
-
-## 🔒 Security & Data Isolation
-
-- **User Isolation**: All relational queries, FTS5 BM25 lookups, and vector cosine searches are strictly isolated by `user_id`.
-- **Cascade Deletion**: Removing a document automatically purges all associated chunks, TMUs, vector embeddings, and graph edges in an atomic transaction.
-- **Untrusted Input Sanitation**: Document contents are parsed with strict memory boundaries and stripped of potential prompt injection vectors.
-
----
-
-## 📄 License
-
-This project is open-source and licensed under the [MIT License](LICENSE).
+MIT

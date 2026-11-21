@@ -1,7 +1,10 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from __future__ import annotations
+
 from enum import Enum
-from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, Field
+
 
 class MemoryType(str, Enum):
     EVENT = "event"
@@ -13,14 +16,16 @@ class MemoryType(str, Enum):
     OBSERVATION = "observation"
     PLAN = "plan"
     REFLECTION = "reflection"
+    FEELING = "feeling"
+
 
 class DateGranularity(str, Enum):
     DAY = "day"
     MONTH = "month"
     SEASON = "season"
     YEAR = "year"
-    DECADE = "decade"
     UNRECORDED = "unrecorded"
+
 
 class DateSource(str, Enum):
     EXPLICIT_IN_TEXT = "explicit_in_text"
@@ -28,14 +33,14 @@ class DateSource(str, Enum):
     RELATIVE_INFERRED = "relative_inferred"
     USER_OVERRIDE = "user_override"
 
+
 class RelationType(str, Enum):
     EVOLVES_FROM = "evolves_from"
     CONTRADICTS = "contradicts"
     SUPPORTS = "supports"
-    REVISES = "revises"
     FOLLOWS = "follows"
-    REPLACES = "replaces"
     RELATED_TO = "related_to"
+
 
 class QueryIntent(str, Enum):
     FACT_LOOKUP = "FACT_LOOKUP"
@@ -46,236 +51,245 @@ class QueryIntent(str, Enum):
     CONTRADICTION_ANALYSIS = "CONTRADICTION_ANALYSIS"
     VERSION_COMPARISON = "VERSION_COMPARISON"
     STABLE_PATTERN_ANALYSIS = "STABLE_PATTERN_ANALYSIS"
-    EVIDENCE_REQUEST = "EVIDENCE_REQUEST"
+    SUMMARY = "SUMMARY"
 
-# User Models
-class UserCreate(BaseModel):
-    username: str
-    display_name: str
-    email: Optional[str] = None
-    password: Optional[str] = None
-    avatar_color: str = "#38bdf8"
-    bio: Optional[str] = None
 
-class UserRegisterRequest(BaseModel):
+# ---------------- Users & auth ----------------
+class RegisterRequest(BaseModel):
     email: str
     username: str
     password: str
-    display_name: str
+    display_name: str = ""
     bio: Optional[str] = None
-    avatar_color: str = "#38bdf8"
+    avatar_color: str = "#8b9cff"
 
-class UserLoginRequest(BaseModel):
+
+class LoginRequest(BaseModel):
     username_or_email: str
     password: str
 
-class UserResponse(BaseModel):
+
+class UserOut(BaseModel):
     id: str
     username: str
     display_name: str
     email: Optional[str] = None
     avatar_color: str
     bio: Optional[str] = None
+    preferences: Dict[str, Any] = Field(default_factory=dict)
     created_at: str
     document_count: int = 0
-    tmu_count: int = 0
+    memory_count: int = 0
     earliest_memory_date: Optional[str] = None
     latest_memory_date: Optional[str] = None
 
+
 class AuthResponse(BaseModel):
     token: str
-    user: UserResponse
+    user: UserOut
 
-# Thought Lodging (Time Capsule)
-class LodgeThoughtRequest(BaseModel):
-    statement: str
-    memory_type: MemoryType = MemoryType.BELIEF
-    event_date: Optional[str] = None  # ISO8601 (e.g. today or custom historical date)
-    stance_polarity: Optional[float] = None  # None for auto-detection
-    entities: Optional[List[str]] = None
-    topics: Optional[List[str]] = None
-    context_note: Optional[str] = None
 
-# Document Models
-class DocumentBase(BaseModel):
-    title: str
-    file_type: str
+class ProfileUpdate(BaseModel):
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_color: Optional[str] = None
+    preferences: Optional[Dict[str, Any]] = None
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
+
+# ---------------- Documents ----------------
+class NoteCreate(BaseModel):
+    title: str = ""
+    content: str
     document_date: Optional[str] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    tags: List[str] = Field(default_factory=list)
 
-class DocumentCreate(DocumentBase):
-    user_id: str = "default_user"
-    content: Optional[str] = None
 
-class DocumentResponse(DocumentBase):
+class DocumentUpdate(BaseModel):
+    title: Optional[str] = None
+    document_date: Optional[str] = None
+    tags: Optional[List[str]] = None
+    favorite: Optional[bool] = None
+    series_name: Optional[str] = None
+    version_label: Optional[str] = None
+
+
+class DocumentOut(BaseModel):
     id: str
     user_id: str
-    file_path: str
+    title: str
+    source_type: str
+    file_name: Optional[str] = None
+    file_type: str
     file_size: int
-    hash_sha256: str
+    document_date: Optional[str] = None
+    date_confidence: float = 0
+    word_count: int = 0
+    tags: List[str] = Field(default_factory=list)
+    favorite: bool = False
+    series_name: Optional[str] = None
+    version_label: Optional[str] = None
+    excerpt: str = ""
     created_at: str
+    updated_at: str
     chunk_count: int = 0
-    tmu_count: int = 0
+    memory_count: int = 0
 
-# Chunk Models
-class ChunkResponse(BaseModel):
-    id: str
-    document_id: str
-    chunk_index: int
+
+class DocumentDetail(DocumentOut):
     content: str
-    token_count: int
-    page_number: Optional[int] = None
-    start_char: int
-    end_char: int
-    created_at: str
+    memories: List["MemoryOut"] = Field(default_factory=list)
 
-# Temporal Memory Unit (TMU)
-class TMUBase(BaseModel):
+
+# ---------------- Memories ----------------
+class MemoryOut(BaseModel):
+    id: str
+    user_id: str
+    document_id: str
+    document_title: Optional[str] = None
+    chunk_id: Optional[str] = None
     memory_type: MemoryType
     statement: str
     event_date_start: Optional[str] = None
     event_date_end: Optional[str] = None
     date_granularity: DateGranularity = DateGranularity.UNRECORDED
-    date_confidence: float = 1.0
+    date_confidence: float = 0
     date_source: DateSource = DateSource.DOC_METADATA
-    stance_polarity: float = 0.0  # -1.0 to 1.0
+    stance_polarity: float = 0
+    sentiment: float = 0
+    importance: float = 0.5
     entities: List[str] = Field(default_factory=list)
     topics: List[str] = Field(default_factory=list)
-
-class TMUCreate(TMUBase):
-    document_id: str
-    chunk_id: str
-    user_id: str = "default_user"
-
-class TMUResponse(TMUBase):
-    id: str
-    document_id: str
-    chunk_id: str
-    user_id: str
-    document_title: Optional[str] = None
+    pinned: bool = False
     created_at: str
 
-# Memory Graph Edges
-class MemoryRelationshipResponse(BaseModel):
+
+class MemoryCapture(BaseModel):
+    statement: str
+    memory_type: Optional[MemoryType] = None
+    event_date: Optional[str] = None
+    context_note: Optional[str] = None
+    tags: List[str] = Field(default_factory=list)
+
+
+class MemoryUpdate(BaseModel):
+    statement: Optional[str] = None
+    memory_type: Optional[MemoryType] = None
+    event_date: Optional[str] = None
+    pinned: Optional[bool] = None
+
+
+class MemoryPage(BaseModel):
+    items: List[MemoryOut]
+    total: int
+
+
+# ---------------- Analysis ----------------
+class ChangePointOut(BaseModel):
+    id: str
+    subject: str
+    change_type: str
+    magnitude: float
+    earlier: MemoryOut
+    later: MemoryOut
+    from_date: Optional[str] = None
+    to_date: Optional[str] = None
+    uncertainty: Optional[str] = None
+
+
+class RelationshipOut(BaseModel):
     id: str
     source_memory_id: str
     target_memory_id: str
     relation_type: RelationType
     confidence: float
-    evidence_rationale: Optional[str] = None
-    source_statement: Optional[str] = None
-    target_statement: Optional[str] = None
-    source_date: Optional[str] = None
-    target_date: Optional[str] = None
-    created_at: str
+    rationale: Optional[str] = None
+    source: Optional[MemoryOut] = None
+    target: Optional[MemoryOut] = None
 
-# Change Points
-class ChangePointResponse(BaseModel):
-    id: str
-    user_id: str
-    topic_or_entity: str
-    from_period: str
-    to_period: str
-    change_type: str  # gradual_evolution, sudden_shift, reversal, goal_abandonment
-    magnitude: float
-    earlier_memory_id: str
-    later_memory_id: str
-    earlier_statement: Optional[str] = None
-    later_statement: Optional[str] = None
-    earlier_date: Optional[str] = None
-    later_date: Optional[str] = None
-    uncertainty_bounds: Optional[str] = None
-    created_at: str
 
-# Version Snapshots
-class DocumentVersionResponse(BaseModel):
-    id: str
-    series_name: str
-    version_label: str
-    document_id: str
-    version_order: int
-    version_date: str
-
-class VersionDiffResponse(BaseModel):
+class VersionDiffOut(BaseModel):
     series_name: str
     earlier_version: str
     later_version: str
-    added_skills_or_topics: List[str]
-    removed_skills_or_topics: List[str]
-    retained_skills_or_topics: List[str]
+    earlier_document_id: str
+    later_document_id: str
+    added: List[str]
+    removed: List[str]
+    retained: List[str]
     semantic_changes: List[Dict[str, Any]]
+    line_diff: List[Dict[str, Any]]
     summary: str
 
-# Retrieval & Provenance
-class GroundedClaim(BaseModel):
-    claim_id: str
-    claim_text: str
-    claim_type: str  # explicit, empirical_change, inferred_relationship
-    confidence: float
-    evidence_tmu_ids: List[str]
-    source_citations: List[Dict[str, Any]]
-    is_uncertain: bool = False
-    uncertainty_note: Optional[str] = None
 
-class TimelinePoint(BaseModel):
-    period: str
-    date_display: str
-    event_date: str
-    headline: str
-    statement: str
-    memory_type: MemoryType
-    document_title: str
-    document_id: str
-    tmu_id: str
-    confidence: float
-    stance_polarity: float
-
-# Query & Generation
-class QueryRequest(BaseModel):
+# ---------------- Chat & query ----------------
+class ChatRequest(BaseModel):
     query: str
-    user_id: str = "default_user"
-    pipeline_mode: str = "memory_lane"  # "baseline", "temporal", "memory_lane"
+    conversation_id: Optional[str] = None
+    pipeline_mode: str = "memory_lane"  # baseline | temporal | memory_lane
     filter_start_year: Optional[int] = None
     filter_end_year: Optional[int] = None
-    filter_topics: Optional[List[str]] = None
     filter_memory_types: Optional[List[MemoryType]] = None
-    top_k: int = 10
-    ablation_disable_temporal: bool = False
-    ablation_disable_rerank: bool = False
-    ablation_disable_change_detection: bool = False
+    top_k: int = 12
 
-class QueryResponse(BaseModel):
+
+class Citation(BaseModel):
+    index: int
+    memory_id: str
+    document_id: str
+    document_title: str
+    statement: str
+    date: Optional[str] = None
+    memory_type: str
+    score: float = 0
+
+
+class AnswerPayload(BaseModel):
     query: str
-    detected_intent: QueryIntent
-    pipeline_used: str
+    intent: QueryIntent
+    pipeline: str
     answer: str
-    timeline: List[TimelinePoint]
-    detected_changes: List[ChangePointResponse]
-    potential_contradictions: List[MemoryRelationshipResponse]
-    grounded_claims: List[GroundedClaim]
-    uncertainty_notes: List[str]
-    retrieved_tmus: List[TMUResponse]
-    execution_time_ms: float
-    model_calls: int = 1
+    citations: List[Citation]
+    used_citations: List[int] = Field(default_factory=list)
+    changes: List[ChangePointOut] = Field(default_factory=list)
+    contradictions: List[RelationshipOut] = Field(default_factory=list)
+    uncertainty_notes: List[str] = Field(default_factory=list)
+    follow_ups: List[str] = Field(default_factory=list)
+    year_range: Optional[List[int]] = None
+    provider: str = "offline"
+    timings_ms: Dict[str, float] = Field(default_factory=dict)
 
-# Evaluation & Benchmark
-class EvaluationBenchmarkRequest(BaseModel):
+
+class ConversationOut(BaseModel):
+    id: str
+    title: str
+    pinned: bool = False
+    created_at: str
+    updated_at: str
+    message_count: int = 0
+    preview: str = ""
+
+
+class MessageOut(BaseModel):
+    id: str
+    role: str
+    content: str
+    payload: Dict[str, Any] = Field(default_factory=dict)
+    feedback: int = 0
+    created_at: str
+
+
+class ConversationDetail(ConversationOut):
+    messages: List[MessageOut]
+
+
+class BenchmarkRequest(BaseModel):
     run_name: str = "Benchmark Run"
-    test_suite: str = "temporal_longitudinal_v1"
     pipelines: List[str] = ["baseline", "temporal", "memory_lane"]
 
-class PipelineMetric(BaseModel):
-    pipeline: str
-    chronological_ordering_accuracy: float
-    temporal_coverage_recall: float
-    change_point_f1: float
-    unsupported_claim_rate: float
-    average_latency_ms: float
-    total_token_usage: int
 
-class EvaluationRunResponse(BaseModel):
-    id: str
-    run_name: str
-    created_at: str
-    metrics: Dict[str, PipelineMetric]
-    summary_findings: str
+DocumentDetail.model_rebuild()
